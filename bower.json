@@ -1,0 +1,10 @@
+{
+  "name": "cluster.coreos.powerbox",
+  "version": "0.0.1",
+  "description": "Capability-discipline powerbox for Docker workloads in an EPFL-STI cluster",
+  "homepage": "https://github.com/angular/angular-seed",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+  }
+}
