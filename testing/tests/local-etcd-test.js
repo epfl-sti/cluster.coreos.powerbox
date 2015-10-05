@@ -3,16 +3,7 @@ var assert = require("assert"),
     debug = require("debug")("local-etcd-test"),
     LocalEtcd = require('../local-etcd').LocalEtcd;
 
-Promise.prototype.thenTestDone = function (done) {
-    this.then(
-        function () {
-            done()
-        }, function (error) {
-            done(error);
-        });
-};
-
-describe.only("Testing ../local-etcd.js", function () {
+describe("Testing ../local-etcd.js", function () {
     this.timeout(60*1000);
     it("is reachable immediately", function (done) {
         debug("Starting test");

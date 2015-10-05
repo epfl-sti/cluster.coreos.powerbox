@@ -101,8 +101,9 @@ LocalEtcd.prototype.start = function () {
                 reject(new Error("docker exited prematurely"));
             });
             // TODO: check that etcd became a leader
+            // using "docker logs local-etcd"
             setTimeout(function () {
-                debug("querying etcd root");
+                debug("Pinging etcd root");
                 self.getClient().get("/", function(err, n) {
                     if (err) {
                         reject(err);
@@ -132,6 +133,23 @@ LocalEtcd.prototype.stop = function () {
             resolve();
         });
     });
+};
+
+LocalEtcd.prototype.writeTestKeys = function (keys) {
+    var client = this.getClient();
+    return Promise.all(keys.map(function (kv) {
+        var k = kv[0];
+        var v = kv[1];
+        return new Promise(function (resolve, reject) {
+            client.set(k, v, function (err, unused_node) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            })
+        })
+    }));
 };
 
 LocalEtcd.prototype.isKitematic = function() {
