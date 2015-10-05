@@ -34,7 +34,17 @@ function caCertsDir() {
  * @constructor
  */
 
-var LocalEtcd = exports.LocalEtcd = function () {};
+var localEtcds = [];
+
+var LocalEtcd = exports.LocalEtcd = function () {
+    localEtcds.push(this);
+};
+
+LocalEtcd.killAll = function () {
+    return Promise.all(localEtcds.map(function (etcd) {
+        return etcd.stop();
+    }));
+};
 
 LocalEtcd.prototype.start = function () {
     var self = this;
@@ -68,13 +78,13 @@ LocalEtcd.prototype.start = function () {
             [
                 '-p', String(self.clientPort) + ':2379',
                 '-p', String(self.peerPort) + ':2380',
-                '--name', uniqueName, 'quay.io/coreos/etcd:v2.0.12',
+                '--name', 'local-etcd', '--rm', 'quay.io/coreos/etcd:v2.0.12',
                 '-name', 'etcd0',
+                '-listen-client-urls', 'http://0.0.0.0:2379',
                 '-advertise-client-urls', translatedClientAddress,
-      //          '-listen-client-urls', 'http://0.0.0.0:' + String(self.clientPort),
+                '-listen-peer-urls',  'http://0.0.0.0:2380',
                 '-initial-advertise-peer-urls', translatedPeerAddress,
                 '-initial-cluster', 'etcd0=' + translatedPeerAddress,
-        //        '-listen-peer-urls',  'http://0.0.0.0:2380',
 
                 '-initial-cluster-token', uniqueName,
                 '-initial-cluster-state', 'new'
@@ -82,22 +92,28 @@ LocalEtcd.prototype.start = function () {
             debug("dockerArgs is ", dockerArgs);
         self.process = child_process.spawn(
             self.dockerCommand(), dockerArgs,
-                {stdio: 'inherit', env: self.dockerEnv()}
+                {stdio: ['ignore', 'inherit', 'inherit'],
+                    env: self.dockerEnv()}
             );
         return new Promise(function (resolve, reject) {
             self.process.on("error", reject);
             self.process.on("exit", function () {
                 reject(new Error("docker exited prematurely"));
             });
-            self.getClient().get("/", function(err, n) {
-                if (err) {
-                    reject(err);
-                } else if (n && n.node && n.node.dir) {
-                    resolve();
-                } else {
-                    reject(new Error("Weird root node"));
-                }
-            });
+            // TODO: check that etcd became a leader
+            setTimeout(function () {
+                debug("querying etcd root");
+                self.getClient().get("/", function(err, n) {
+                    if (err) {
+                        reject(err);
+                    } else if (n && n.node && n.node.dir) {
+                        resolve();
+                    } else {
+                        reject(new Error("Weird root node"));
+                    }
+                });
+
+            }, 10 * 1000);
         });
     });
 };
@@ -106,7 +122,7 @@ LocalEtcd.prototype.stop = function () {
     var self = this;
     if (! self.process) return Promise.resolve();
     return new Promise(function (resolve, reject) {
-        self.process.kill(process.pid);
+        self.process.kill();
         var timeout = setTimeout(function () {
             self.process.removeListener(resolve);
             reject(new Error("Timed out trying to stop local etcd"));
@@ -136,7 +152,11 @@ LocalEtcd.prototype.getClient = function () {
 
 LocalEtcd.prototype.dockerCommand = function () {
     // TODO: portablify
-    return ("/Applications/Kitematic (Beta).app/Contents/Resources/resources/docker");
+    if (this.isKitematic()) {
+        return ("/Applications/Kitematic (Beta).app/Contents/Resources/resources/docker");
+    } else {
+        throw new Error("Failed at guessing docker path!");
+    }
 };
 
 LocalEtcd.prototype.dockerEnv = function () {
@@ -149,3 +169,4 @@ LocalEtcd.prototype.dockerEnv = function () {
 
     return envCopy;
 };
+
