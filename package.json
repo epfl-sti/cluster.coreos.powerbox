@@ -20,6 +20,7 @@
     "express": "^4.12.4",
     "express-session": "^1.11.3",
     "jade": "",
+    "node-etcd": "^4.2.1",
     "nunjucks": "",
     "q": "^1.4.1",
     "session-file-store": "0.0.14",
