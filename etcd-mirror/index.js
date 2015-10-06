@@ -1,50 +1,44 @@
 /**
  * Mirror an etcd directory into a directory on the filesystem.
  */
-var fs = require("fs");
+var fs = require("fs"),
+    path = require("path"),
+    aWrite = require('atomic-write'),
+    Q = require("q");
 
 exports.forTestsOnly = {};
 
 /**
  * Ancillary class to represent the state of the mirror target
  *
- * @param path Path to the main directory (need not exist)
+ * @param sie Path to the main directory (need not exist)
  * @constructor
  */
-var DirectoryState = exports.forTestsOnly.DirectoryState = function (path) {
+var DirectoryState = exports.forTestsOnly.DirectoryState = function (dir) {
+    dir = path.resolve(dir);
     return {
         /**
-         * @returns {Promise} A list of all file names (not directories)
-         */
-        load: function () {
-            return new Promise(function (resolve, reject) {
-
-            });
-        },
-
-        /**
          * Write a file, creating parent directories if needed
-         * @param path
+         * @param keyPath
          * @param contents
          * @returns {Promise}
          */
-        set: function (path, contents) {
-            return new Promise(function (resolve, reject) {
-            });
+        set: function (keyPath, contents) {
+            var fullPath = dir + "/" + keyPath;
+            return Q.nfcall(aWrite.writeFile.bind(aWrite), fullPath, contents);
         },
         /**
          * Delete a file, removing parent directories if needed
          *
          * Does nothing if file doesn't exist
          *
-         * @param path
+         * @param keyPath
          * @returns {Promise}
          */
-        delete: function (path) {
-            return new Promise(function (resolve, reject) {
-            });
+        delete: function (keyPath) {
+            var fullPath = dir + "/" + keyPath;
+            return Q.nfcall(fs.unlink, fullPath);
         }
-
     }
 };
 

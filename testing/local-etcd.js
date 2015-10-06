@@ -1,7 +1,6 @@
 var child_process = require('child_process'),
     debug = require('debug')('local-etcd'),
     fs = require('fs'),
-    Q = require('Q'),
     portfinder = require('portfinder'),
     EtcdClient = require('node-etcd');
 

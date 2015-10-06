@@ -1,8 +1,7 @@
-/**
- * New module.
- */
+var Q = require("q");
+Q.longStackSupport = true;
 
-Promise.prototype.thenTestDone = function (done) {
+Promise.prototype.thenTestDone = Q.makePromise.prototype.thenTestDone = function (done) {
     this.then(
         function () {
             done()

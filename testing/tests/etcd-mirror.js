@@ -2,9 +2,13 @@
  * Mocha tests for the etcd-mirror module.
  */
 var assert = require("assert"),
+    fs = require("fs"),
     util = require("util"),
     debug = require("debug")("etcd-mirror"),
-    EtcdMirror = require("../../etcd-mirror").EtcdMirror,
+    tmp = require("tmp"),
+    Q = require("q"),
+    etcd_mirror = require("../../etcd-mirror"),
+    EtcdMirror = etcd_mirror.EtcdMirror,
     EventEmitter = require('events').EventEmitter,
     LocalEtcd = require('../local-etcd').LocalEtcd;
 
@@ -43,17 +47,55 @@ function FakeDirectoryState() {
 }
 
 describe("etcd-mirror module", function () {
-    describe("DirectoryState read tests", function () {
-        it("reads a directory state");
-        it("treats a nonexistent directory as empty");
-        it("throws (rejects promises) on other read errors");
-    });
-    describe("DirectoryState write tests", function () {
-        it("writes files");
-        it("creates subdirectories if needed");
-        it("deletes files");
+    describe.only("DirectoryState", function () {
+        var DirectoryState = etcd_mirror.forTestsOnly.DirectoryState;
+        it("writes files", function (done) {
+            var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
+            var ds = new DirectoryState(tmpobj.name);
+            var promise = ds.set("/zoinx", "AAA").then(function () {
+                var contents = fs.readFileSync(tmpobj.name + "/zoinx");
+                assert.equal(contents, "AAA");
+            });
+            var q = Q;
+                promise.thenTestDone(done);
+        });
+        it("creates subdirectories if needed", function (done) {
+            var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
+            var ds = new DirectoryState(tmpobj.name + "/quux");
+            ds.set("/zoinx/foo", "AAA").then(function () {
+                var contents = fs.readFileSync(tmpobj.name + "/quux/zoinx/foo");
+                assert.equal(contents, "AAA");
+            }).thenTestDone(done);
+        });
+        it("deletes files", function (done) {
+            var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
+            fs.mkdirSync(tmpobj.name + "/foo");
+            fs.writeFileSync(tmpobj.name + "/foo/bar", "ZZZ");
+            var ds = new DirectoryState(tmpobj.name);
+            ds.delete("/foo/bar".then(function () {
+                assert(! fs.existsSync("/foo/bar"));
+            }));
+        });
+        it("doesn't mind deleting nonexistent files", function (done) {
+            var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
+            var ds = new DirectoryState(tmpobj.name);
+            ds.delete("/foo/bar".then(function () {
+                assert(! fs.existsSync("/foo/bar"));
+            }));
+        });
         it("removes subdirectories if needed");
-        it("throws (rejects promises) on write errors");
+        it("throws (rejects promises) on write errors", function (done) {
+            var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
+            var ds = new DirectoryState(tmpobj.name);
+            fs.mkdirSync(tmpobj.name + "/foo/bar");
+            Promise.resolve().then(function () {
+                return ds.set("/foo/bar", "A");
+            }).then(function () {
+                done(new Error("Should have thrown"));
+            }, function (error) {
+                done();
+            });
+        });
     });
 
     describe("EtcdMirror", function () {
