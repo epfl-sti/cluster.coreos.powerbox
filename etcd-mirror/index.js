@@ -3,7 +3,8 @@
  */
 var fs = require("fs"),
     path = require("path"),
-    aWrite = require('atomic-write'),
+    aWrite = require("atomic-write"),
+    mkpath = require("mkpath"),
     Q = require("q");
 
 exports.forTestsOnly = {};
@@ -25,7 +26,11 @@ var DirectoryState = exports.forTestsOnly.DirectoryState = function (dir) {
          */
         set: function (keyPath, contents) {
             var fullPath = dir + "/" + keyPath;
-            return Q.nfcall(aWrite.writeFile.bind(aWrite), fullPath, contents);
+            return Q.nfcall(mkpath, path.dirname(fullPath))
+                .then(function () {
+                    return Q.nfcall(aWrite.writeFile.bind(aWrite),
+                        fullPath, contents);
+                });
         },
         /**
          * Delete a file, removing parent directories if needed

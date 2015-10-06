@@ -49,15 +49,13 @@ function FakeDirectoryState() {
 describe("etcd-mirror module", function () {
     describe.only("DirectoryState", function () {
         var DirectoryState = etcd_mirror.forTestsOnly.DirectoryState;
-        it("writes files", function (done) {
+        it.only("writes files", function (done) {
             var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
             var ds = new DirectoryState(tmpobj.name);
-            var promise = ds.set("/zoinx", "AAA").then(function () {
+            ds.set("/zoinx", "AAA").then(function () {
                 var contents = fs.readFileSync(tmpobj.name + "/zoinx");
                 assert.equal(contents, "AAA");
-            });
-            var q = Q;
-                promise.thenTestDone(done);
+            }).thenTestDone(done);
         });
         it("creates subdirectories if needed", function (done) {
             var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
