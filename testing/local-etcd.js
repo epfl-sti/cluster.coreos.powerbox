@@ -89,8 +89,9 @@ LocalEtcd.prototype.start = function () {
                 '-initial-cluster-token', uniqueName,
                 '-initial-cluster-state', 'new'
             ]);
-            debug("dockerArgs is ", dockerArgs);
         var dockerCommand = self.dockerCommand();
+        debug("Running " +
+            Array.prototype.concat([dockerCommand], dockerArgs).join(' '));
         self.process = child_process.spawn(
             dockerCommand, dockerArgs,
             {stdio: ['ignore', 'inherit', 'inherit'],
