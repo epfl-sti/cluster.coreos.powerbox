@@ -90,15 +90,21 @@ LocalEtcd.prototype.start = function () {
                 '-initial-cluster-state', 'new'
             ]);
             debug("dockerArgs is ", dockerArgs);
+        var dockerCommand = self.dockerCommand();
         self.process = child_process.spawn(
-            self.dockerCommand(), dockerArgs,
-                {stdio: ['ignore', 'inherit', 'inherit'],
-                    env: self.dockerEnv()}
+            dockerCommand, dockerArgs,
+            {stdio: ['ignore', 'inherit', 'inherit'],
+                env: self.dockerEnv()}
             );
         return new Promise(function (resolve, reject) {
-            self.process.on("error", reject);
+            self.process.on("error", function () {
+                reject(new Error("cannot communicate with " + dockerCommand +
+                    " process"));
+                self.process = undefined;
+            });
             self.process.on("exit", function () {
-                reject(new Error("docker exited prematurely"));
+                reject(new Error(dockerCommand + " exited prematurely"));
+                self.process = undefined;
             });
             // TODO: check that etcd became a leader
             // using "docker logs local-etcd"

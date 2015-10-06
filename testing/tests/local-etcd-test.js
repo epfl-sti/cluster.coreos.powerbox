@@ -3,6 +3,8 @@ var assert = require("assert"),
     debug = require("debug")("local-etcd-test"),
     LocalEtcd = require('../local-etcd').LocalEtcd;
 
+require("../testlib");
+
 describe("Testing ../local-etcd.js", function () {
     this.timeout(60*1000);
     it("is reachable immediately", function (done) {

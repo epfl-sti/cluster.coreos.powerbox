@@ -4,10 +4,11 @@
 var assert = require("assert"),
     util = require("util"),
     debug = require("debug")("etcd-mirror"),
-    _unused = require("../testlib.js"),
     EtcdMirror = require("../../etcd-mirror").EtcdMirror,
     EventEmitter = require('events').EventEmitter,
     LocalEtcd = require('../local-etcd').LocalEtcd;
+
+require("../testlib.js");
 
 /**
  * Fake node-etcd instance
