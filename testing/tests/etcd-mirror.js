@@ -47,9 +47,9 @@ function FakeDirectoryState() {
 }
 
 describe("etcd-mirror module", function () {
-    describe.only("DirectoryState", function () {
+    describe("DirectoryState", function () {
         var DirectoryState = etcd_mirror.forTestsOnly.DirectoryState;
-        it.only("writes files", function (done) {
+        it("writes files", function (done) {
             var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
             var ds = new DirectoryState(tmpobj.name);
             ds.set("/zoinx", "AAA").then(function () {
@@ -85,12 +85,11 @@ describe("etcd-mirror module", function () {
         it("throws (rejects promises) on write errors", function (done) {
             var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
             var ds = new DirectoryState(tmpobj.name);
+            fs.mkdirSync(tmpobj.name + "/foo");
             fs.mkdirSync(tmpobj.name + "/foo/bar");
-            Promise.resolve().then(function () {
-                return ds.set("/foo/bar", "A");
-            }).then(function () {
+            ds.set("/foo/bar", "A").then(function () {
                 done(new Error("Should have thrown"));
-            }, function (error) {
+            }).catch(function (error) {
                 done();
             });
         });
