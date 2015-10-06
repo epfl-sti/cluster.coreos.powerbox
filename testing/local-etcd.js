@@ -125,7 +125,6 @@ LocalEtcd.prototype.stop = function () {
     return new Promise(function (resolve, reject) {
         self.process.kill();
         var timeout = setTimeout(function () {
-            self.process.removeListener(resolve);
             reject(new Error("Timed out trying to stop local etcd"));
         }, 10000);
         self.process.once("exit", function () {
