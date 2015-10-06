@@ -42,7 +42,11 @@ var DirectoryState = exports.forTestsOnly.DirectoryState = function (dir) {
          */
         delete: function (keyPath) {
             var fullPath = dir + "/" + keyPath;
-            return Q.nfcall(fs.unlink, fullPath);
+            return Q.nfcall(fs.unlink, fullPath)
+                .catch(function (error) {
+                    if (error.code === "ENOENT") return;
+                    throw error;
+                });
         }
     }
 };

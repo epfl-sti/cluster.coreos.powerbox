@@ -70,16 +70,16 @@ describe("etcd-mirror module", function () {
             fs.mkdirSync(tmpobj.name + "/foo");
             fs.writeFileSync(tmpobj.name + "/foo/bar", "ZZZ");
             var ds = new DirectoryState(tmpobj.name);
-            ds.delete("/foo/bar".then(function () {
+            ds.delete("/foo/bar").then(function () {
                 assert(! fs.existsSync("/foo/bar"));
-            }));
+            }).thenTestDone(done);
         });
         it("doesn't mind deleting nonexistent files", function (done) {
             var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
             var ds = new DirectoryState(tmpobj.name);
-            ds.delete("/foo/bar".then(function () {
+            ds.delete("/foo/bar").then(function () {
                 assert(! fs.existsSync("/foo/bar"));
-            }));
+            }).thenTestDone(done);
         });
         it("removes subdirectories if needed");
         it("throws (rejects promises) on write errors", function (done) {
