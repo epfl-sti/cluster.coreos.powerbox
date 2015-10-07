@@ -3,9 +3,11 @@
  */
 var fs = require("fs"),
     path = require("path"),
+    util = require("util"),
     aWrite = require("atomic-write"),
     mkpath = require("mkpath"),
-    Q = require("q");
+    Q = require("q"),
+    EventEmitter = require("events").EventEmitter;
 
 exports.forTestsOnly = {};
 
@@ -61,42 +63,63 @@ var DirectoryState = exports.forTestsOnly.DirectoryState = function (dir) {
  */
 exports.EtcdMirror = function (client, fromEtcdSubdir, toDir) {
     var dirState = (toDir instanceof String) ? new DirectoryState(toDir) : toDir;
+    var self = this;
 
-    return {
-        /**
-         * Load the current etcd state from a recursive get, and write it out.
-         *
-         * @returns {Promise}
-         */
-        sync: function () {
-            return new Promise(function (resolve, reject) {
-                client.get("/", {recursive: true}, function (err, result) {
-                    if (err) {
-                        reject(err);
-                        return;
-                    } else {
-                        resolve(result);
+    /**
+     * Load the current etcd state from a recursive get, and write it out.
+     *
+     * @returns {Promise}
+     */
+    var sync = function () {
+        return new Promise(function (resolve, reject) {
+            client.get("/", {recursive: true}, function (err, result) {
+                if (err) {
+                    reject(err);
+                    return;
+                } else {
+                    resolve(result);
+                }
+            })
+        }).then(function (result) {
+                var addNodeRecursively;
+                var doneWritingPromises = [];
+                addNodeRecursively = function (node) {
+                    if (node.nodes) {
+                        node.nodes.map(addNodeRecursively);
                     }
-                })
-            }).then(function (result) {
-                    var addNodeRecursively;
-                    var doneWritingPromises = [];
-                    addNodeRecursively = function (node) {
-                        if (node.nodes) {
-                            node.nodes.map(addNodeRecursively);
+                    if (node.value) {
+                        var relPath = path.relative(fromEtcdSubdir, node.key);
+                        if (! relPath.startsWith("../")) {
+                            doneWritingPromises.push(dirState.set(
+                                "/" + relPath, node.value));
                         }
-                        if (node.value) {
-                            var relPath = path.relative(fromEtcdSubdir, node.key);
-                            if (! relPath.startsWith("../")) {
-                                doneWritingPromises.push(dirState.set(
-                                    "/" + relPath, node.value));
-                            }
-                        }
-                    };
-                    addNodeRecursively(result.node);
-                    return Promise.all(doneWritingPromises);
-                });
-        }
+                    }
+                };
+                addNodeRecursively(result.node);
+                return Promise.all(doneWritingPromises);
+            });
     };
+
+    /**
+     * Start syncing
+     *
+     * Emits:
+     *   'sync' - Initial sync done
+     *   'changed' - A subsequent (post-sync) change was done
+     *   'error' - Something went wrong, the sync was stopped
+     */
+    this.start = function() {
+        sync().then(function () {
+            self.emit("sync");
+        }).catch(function(error) {
+            self.emit("error", error);
+        });
+    };
+
+    /**
+     * Stop syncing
+     */
+    this.stop = function() {};
 };
 
+util.inherits(exports.EtcdMirror, EventEmitter);

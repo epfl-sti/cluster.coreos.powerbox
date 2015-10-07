@@ -120,16 +120,20 @@ describe("etcd-mirror module", function () {
                 ["/foo/txt", "1234"],
                 ["/foo/bar/baz", "abc"]
             ]).then(function () {
-                    var fakeState = new FakeDirectoryState();
-                    var mirror = new EtcdMirror(localEtcd.getClient(),
-                        "/", fakeState);
-                    return mirror.sync().then(function () {
-                        assert.deepEqual(fakeState.dump(), {
-                            "/foo/txt": "1234",
-                            "/foo/bar/baz": "abc"
-                        });
+                var fakeState = new FakeDirectoryState();
+                var mirror = new EtcdMirror(localEtcd.getClient(),
+                    "/", fakeState);
+                mirror.start();
+
+                mirror.on("sync", function () {
+                    assert.deepEqual(fakeState.dump(), {
+                        "/foo/txt": "1234",
+                        "/foo/bar/baz": "abc"
                     });
-                }).thenTestDone(done);
+                    done();
+                });
+                mirror.on("error", done);
+            });
         });
         it("cares only about the subdirectory it is told to mirror", function (done) {
             localEtcd.writeTestKeys([
@@ -139,12 +143,15 @@ describe("etcd-mirror module", function () {
                 var fakeState = new FakeDirectoryState();
                 var mirror = new EtcdMirror(localEtcd.getClient(),
                     "/bar/bar", fakeState);
-                return mirror.sync().then(function () {
+                mirror.start();
+                mirror.on("sync", function () {
                     assert.deepEqual(fakeState.dump(), {
                         "/baz/quux": "abc"
                     });
+                    done();
                 });
-            }).thenTestDone(done);
+                mirror.on("error", done);
+            });
         });
 
         after(function (done) {
