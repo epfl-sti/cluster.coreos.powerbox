@@ -245,3 +245,6 @@ LocalEtcd.prototype.runDocker = function (dockerArgs, opt_options) {
         Array.prototype.concat([dockerCommand], dockerArgs).join(' '));
     return child_process.spawn(dockerCommand, dockerArgs, opt_options);
 };
+
+child_process.execSync("'" + LocalEtcd.prototype.dockerCommand() +
+    "' rm -f local-etcd 2>/dev/null || true");
