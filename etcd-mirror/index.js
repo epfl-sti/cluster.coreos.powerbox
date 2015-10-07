@@ -55,12 +55,12 @@ var DirectoryState = exports.forTestsOnly.DirectoryState = function (dir) {
  * Keep a path in sync with a subdirectory of etcd, recursively
  *
  * @param client A [node-etcd](https://www.npmjs.com/package/node-etcd) instance
- * @param etcdSubdir The subdirectory to watch inside the etcd object
- * @param path The path, or injected DirectoryState object (for tests)
+ * @param fromEtcdSubdir The subdirectory to watch inside the etcd object
+ * @param toDir The path to mirror to, or injected DirectoryState object (for tests)
  * @constructor
  */
-exports.EtcdMirror = function (client, etcdSubdir, path) {
-    var dirState = (path instanceof String) ? new DirectoryState(path) : path;
+exports.EtcdMirror = function (client, fromEtcdSubdir, toDir) {
+    var dirState = (toDir instanceof String) ? new DirectoryState(toDir) : toDir;
 
     return {
         /**
@@ -86,8 +86,11 @@ exports.EtcdMirror = function (client, etcdSubdir, path) {
                             node.nodes.map(addNodeRecursively);
                         }
                         if (node.value) {
-                            doneWritingPromises.push(dirState.set(
-                                node.key, node.value));
+                            var relPath = path.relative(fromEtcdSubdir, node.key);
+                            if (! relPath.startsWith("../")) {
+                                doneWritingPromises.push(dirState.set(
+                                    "/" + relPath, node.value));
+                            }
                         }
                     };
                     addNodeRecursively(result.node);
