@@ -81,6 +81,16 @@ describe("etcd-mirror module", function () {
                 assert(! fs.existsSync("/foo/bar"));
             }).thenTestDone(done);
         });
+        it("treats relative paths and absolute paths the same", function (done) {
+            var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
+            var ds = new DirectoryState(tmpobj.name);
+            ds.set("/zoinx", "AAA").then(function () {
+                return ds.set("zoinx2", "BBB")
+            }).then(function() {
+                assert.equal(fs.readFileSync(tmpobj.name + "/zoinx"), "AAA");
+                assert.equal(fs.readFileSync(tmpobj.name + "/zoinx2"), "BBB");
+            }).thenTestDone(done);
+        });
         it("removes subdirectories if needed");
         it("throws (rejects promises) on write errors", function (done) {
             var tmpobj = tmp.dirSync({ mode: 0750, prefix: 'DirectoryState_test_' });
@@ -90,6 +100,7 @@ describe("etcd-mirror module", function () {
             ds.set("/foo/bar", "A").then(function () {
                 done(new Error("Should have thrown"));
             }).catch(function (error) {
+                assert.equal(error.code, "EISDIR");
                 done();
             });
         });
@@ -117,7 +128,6 @@ describe("etcd-mirror module", function () {
                             "/foo/txt": "1234",
                             "/foo/bar/baz": "abc"
                         });
-                        return Promise.resolve();
                     });
                 }).thenTestDone(done);
         });
@@ -133,7 +143,6 @@ describe("etcd-mirror module", function () {
                     assert.deepEqual(fakeState.dump(), {
                         "/baz/quux": "abc"
                     });
-                    return Promise.resolve();
                 });
             }).thenTestDone(done);
         });
