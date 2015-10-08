@@ -4,7 +4,7 @@
 var assert = require("assert"),
     fs = require("fs"),
     util = require("util"),
-    debug = require("debug")("etcd-mirror"),
+    debug = require("debug")("etcd-mirror-test"),
     tmp = require("tmp"),
     Q = require("q"),
     etcd_mirror = require("../../etcd-mirror"),
@@ -151,6 +151,38 @@ describe("etcd-mirror module", function () {
                     done();
                 });
                 mirror.on("error", done);
+            });
+        });
+
+        it("syncs from a nonexistent directory", function (done) {
+            var fakeState = new FakeDirectoryState();
+            var mirror = new EtcdMirror(localEtcd.getClient(),
+                "/no/such/directory", fakeState);
+            mirror.start();
+            mirror.on("sync", function () {
+                assert.deepEqual(fakeState.dump(), {});
+                done();
+            });
+            mirror.on("error", done);
+        });
+
+        it("mirrors continuous changes", function (done) {
+            var fakeState = new FakeDirectoryState();
+            var mirror = new EtcdMirror(localEtcd.getClient(),
+                "/not/seen/yet", fakeState);
+            mirror.on("sync", function () {
+                assert.deepEqual(fakeState.dump(), {});
+                client.set("/not/seen/yet/key", "val", function (err, unused_node) {
+                    if (err) return done(err);
+                    mirror.on("changed", function () {
+                        try {
+                            assert.deepEqual(fakeState.dump(), {key: "val"});
+                        } catch (e) {
+                            done(e);
+                        }
+                        done();
+                    });
+                });
             });
         });
 

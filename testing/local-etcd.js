@@ -246,5 +246,7 @@ LocalEtcd.prototype.runDocker = function (dockerArgs, opt_options) {
     return child_process.spawn(dockerCommand, dockerArgs, opt_options);
 };
 
+var maybeRedirectStderr = debug.enabled ? "": " 2>/dev/null";
 child_process.execSync("'" + LocalEtcd.prototype.dockerCommand() +
-    "' rm -f local-etcd 2>/dev/null || true");
+    "' rm -f local-etcd" + maybeRedirectStderr + " || true",
+    {env: LocalEtcd.prototype.dockerEnv()});
