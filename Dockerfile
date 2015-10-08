@@ -5,5 +5,8 @@ RUN mkdir /powerbox
 ADD etcd-mirror /powerbox/etcd-mirror
 ADD app.js /powerbox/app.js
 ADD package.json /powerbox/package.json
-RUN cd /powerbox && npm install
+
+WORKDIR /powerbox
+RUN npm install
+CMD node app.js
 
