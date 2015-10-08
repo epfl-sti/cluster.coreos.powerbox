@@ -21,6 +21,7 @@
     "express": "^4.12.4",
     "express-session": "^1.11.3",
     "jade": "",
+    "mkpath": "^0.1.0",
     "node-etcd": "^4.2.1",
     "nunjucks": "",
     "q": "^1.4.1",
