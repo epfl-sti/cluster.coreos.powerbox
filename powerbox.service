@@ -1,0 +1,15 @@
+[Unit]
+Description=Powerbox - Don't grab power, ask for it nicely
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStartPre=/bin/sh -c 'mkdir -p /run/power || true'
+ExecStartPre=/bin/sh -c 'docker rm -f %n 2>/dev/null || true'
+ExecStartPre=/usr/bin/docker pull epflsti/cluster.coreos.powerbox
+ExecStart=/bin/sh -c 'docker run --name %n --net=host -v /run/power:/run/power epflsti/cluster.coreos.powerbox'
+RestartSec=5s
+Restart=always
+
+[X-Fleet]
+Global=true
