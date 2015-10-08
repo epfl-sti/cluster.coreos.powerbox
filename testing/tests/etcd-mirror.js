@@ -10,19 +10,12 @@ var assert = require("assert"),
     etcd_mirror = require("../../etcd-mirror"),
     EtcdMirror = etcd_mirror.EtcdMirror,
     EventEmitter = require('events').EventEmitter,
-    LocalEtcd = require('../local-etcd').LocalEtcd;
+    LocalEtcd = require('../local-etcd').LocalEtcd,
+    testlib = require("../testlib.js");
 
-require("../testlib.js");
-
-/**
- * Fake node-etcd instance
- * @constructor
- */
-var FakeEtcd = function () {
-};
-util.inherits(FakeEtcd, EventEmitter);
 
 /**
+ * Fake for the DirectoryState object in etcd-mirror module
  *
  * @constructor
  */
@@ -168,22 +161,35 @@ describe("etcd-mirror module", function () {
 
         it("mirrors continuous changes", function (done) {
             var fakeState = new FakeDirectoryState();
-            var mirror = new EtcdMirror(localEtcd.getClient(),
-                "/not/seen/yet", fakeState);
-            mirror.on("sync", function () {
+            var client = localEtcd.getClient();
+            var mirror = new EtcdMirror(client, "/not/seen/yet", fakeState);
+            mirror.start();
+            testlib.whenEvent(mirror, "sync").then(function () {
+                debug("sync event received");
                 assert.deepEqual(fakeState.dump(), {});
-                client.set("/not/seen/yet/key", "val", function (err, unused_node) {
-                    if (err) return done(err);
-                    mirror.on("changed", function () {
-                        try {
-                            assert.deepEqual(fakeState.dump(), {key: "val"});
-                        } catch (e) {
-                            done(e);
-                        }
-                        done();
-                    });
-                });
-            });
+                return Q.all([
+                    // We don't really have to wait for the write to succeed,
+                    // but in case it fails we want to fail as well.
+                    Q.ninvoke(client, "set", "/not/seen/yet/key", "val"),
+                    testlib.whenEvent(mirror, "change")
+                ]);
+            }).then(function() {
+                debug("first changed event received");
+                assert.deepEqual(fakeState.dump(), {"/key": "val"});
+                return Q.ninvoke(client, "set", "/unrelated/key", "val");
+            }).then(function() {
+                debug("/unrelated/key done writing");
+                return Q.all([
+                    // Same as above: included to catch errors
+                    Q.ninvoke(client, "set", "/not/seen/yet/key", "val2"),
+                    // We expect a single "changed" event, since /unrelated/key
+                    // is outside of the watched directory.
+                    testlib.whenEvent(mirror, "change")
+                ]);
+            }).then(function() {
+                debug("second changed event received");
+                assert.deepEqual(fakeState.dump(), {"/key": "val2"});
+            }).thenTestDone(done);
         });
 
         after(function (done) {

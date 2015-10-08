@@ -124,7 +124,7 @@ exports.EtcdMirror = function (client, fromEtcdSubdir, toDir) {
                 return nodeToDirState(syncedNode, dirState, fromEtcdSubdir);
             }).then(function () {
                 if (syncedNode) lastIndex = getNodeMaxIndex(syncedNode);
-                debug("Synced at index ", lastIndex);
+                debug("Synced at index", lastIndex);
             });
     };
 
@@ -133,8 +133,8 @@ exports.EtcdMirror = function (client, fromEtcdSubdir, toDir) {
      * Start syncing
      *
      * Emits:
-     *   'sync' - Initial sync done
-     *   'changed' - A subsequent (post-sync) change was done
+     *   'sync' - Initial sync done, all writes complete
+     *   'change' - A subsequent change was done, all writes complete
      *   'error' - Something went wrong, the sync was stopped
      */
     this.start = function() {
@@ -157,18 +157,25 @@ exports.EtcdMirror = function (client, fromEtcdSubdir, toDir) {
 
     listenToChanges = function () {
         if (stopped) return;
-        var watcher = client.watcher(fromEtcdSubdir, lastIndex + 1,
+        var nextIndex = (lastIndex === undefined) ? undefined : lastIndex + 1;
+        debug("Listening to changes at index", nextIndex);
+        var watcher = client.watcher(fromEtcdSubdir, nextIndex,
             {recursive: true});
+        watcher.on("error", function (error) {
+            self.emit("error", error);
+        });
         watcher.once("change", function (result) {
+            debug("watcher change event");
             // Throttle flow to prevent silly write races with ourselves
             watcher.stop();
             nodeToDirState(result.node, dirState, fromEtcdSubdir)
                 .then(function () {
                     lastIndex = getNodeMaxIndex(result.node);
-                    emit("changed", lastIndex);
-                    debug("Resuming flow at index ", lastIndex);
+                    self.emit("change", lastIndex);
+                    debug("Resuming flow at index", lastIndex);
                     listenToChanges();   // Resume flow
                 }).catch(function (error) {
+                    debug("Error in listenToChanges:", error);
                     self.emit("error", error);
                 });
         });
