@@ -1,7 +1,8 @@
 /**
  * Mirror an etcd directory into a directory on the filesystem.
  */
-var fs = require("fs"),
+var assert = require("assert"),
+    fs = require("fs"),
     path = require("path"),
     util = require("util"),
     aWrite = require("atomic-write"),
@@ -98,7 +99,8 @@ function getNodeMaxIndex(node) {
  * @constructor
  */
 exports.EtcdMirror = function (client, fromEtcdSubdir, toDir) {
-    var dirState = (toDir instanceof String) ? new DirectoryState(toDir) : toDir;
+    debug('creating EtcdMirror with toDir=', toDir);
+    var dirState = (typeof(toDir) === "string") ? new DirectoryState(toDir) : toDir;
     fromEtcdSubdir = path.resolve("/", fromEtcdSubdir);
     var self = this, stopped, lastIndex;
 
